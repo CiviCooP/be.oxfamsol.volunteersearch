@@ -11,6 +11,7 @@ CRM.volunteerApp.module('Entities', function(Entities, volunteerApp, Backbone, M
                 'city',
                 'state_province'
             ],
+            'need_id': Search.need_id,
             'options': {
                 'limit': Search.resultsPerPage,
                 'offset': 0
@@ -19,41 +20,22 @@ CRM.volunteerApp.module('Entities', function(Entities, volunteerApp, Backbone, M
         Search.params = _.extend(defaults, Search.params);
 
         var defer = CRM.$.Deferred();
-        CRM.api3('Contact2', 'get', Search.params, {
+        CRM.api3('Contact', 'volunteersearch', Search.params, {
             success: function(data) {
-                Entities.getContactCount().done(function(cnt) {
-                    var end = Search.params.options.offset + Search.params.options.limit;
-                    var start = Search.params.options.offset + 1;
+                var end = Search.params.options.offset + Search.params.options.limit;
+                var start = Search.params.options.offset + 1;
 
-                    if (end > cnt) {
-                        end = cnt;
-                    }
+                if (end > data.metadata.total_found) {
+                    end = data.metadata.total_found;
+                }
 
-                    Search.pagerData.set({
-                        'end': end,
-                        'start': start,
-                        'total': cnt
-                    });
-
-                    defer.resolve(_.toArray(data.values));
+                Search.pagerData.set({
+                    'end': end,
+                    'start': start,
+                    'total': data.metadata.total_found
                 });
-            }
-        });
-        return defer.promise();
-    };
 
-    Entities.getContactCount = function() {
-        var defaults = {
-            'options': {
-                'limit': 0
-            }
-        };
-        params = _.extend(defaults, CRM.volunteerApp.module('Search').params);
-
-        var defer = $.Deferred();
-        CRM.api3('Contact2', 'getcount', params, {
-            success: function(data) {
-                defer.resolve(data.result);
+                defer.resolve(_.toArray(data.values));
             }
         });
         return defer.promise();

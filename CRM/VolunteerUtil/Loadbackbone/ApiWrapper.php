@@ -6,10 +6,10 @@ class CRM_VolunteerUtil_Loadbackbone_ApiWrapper implements API_Wrapper {
     return $apiRequest;
   }
 
-  public function toApiOutput($apiRequest, $result) {
+  public function toApiOutput($apiRequest, $results) {
     $ccr = CRM_Core_Resources::singleton();
-    $results['scripts'][] = $ccr->getUrl('be.oxfamsol.volunteersearch', 'js/volunteersearch.js');
-    return $result;
+    $results['values']['scripts'][] = $ccr->getUrl('be.oxfamsol.volunteersearch', 'js/volunteersearch.js');
+    return $results;
   }
 
 }

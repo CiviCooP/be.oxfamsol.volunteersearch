@@ -2,10 +2,15 @@
 
 require_once 'volunteersearch.civix.php';
 
-function volunteersearch_civicrm_apiWrapper(&$wrappers, $apiRequest) {
+function volunteersearch_civicrm_apiWrappers(&$wrappers, $apiRequest) {
   if (strtolower($apiRequest['entity']) == 'volunteerutil' && strtolower($apiRequest['action']) == 'loadbackbone') {
+  	// Add our javascript to manipulate the search for volunteers
     $wrappers[] = new CRM_VolunteerUtil_Loadbackbone_ApiWrapper();
   }
+	if (strtolower($apiRequest['entity']) == 'volunteerutil' && strtolower($apiRequest['action']) == 'getcustomfields') {
+		// Get custom fields of activities and the status and activity type field.
+		$wrappers[] = new CRM_VolunteerUtil_GetCustomfields_ApiWrapper();
+	}
 }
 
 /**
