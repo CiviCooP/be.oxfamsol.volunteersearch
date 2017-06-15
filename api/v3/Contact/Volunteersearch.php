@@ -69,7 +69,9 @@ AND
 	while($contactDao->fetch()) {
 		$nonAvailableContactIds[] = $contactDao->contact_id;
 	}
-	$contact_params['id'] = array('NOT IN' => $nonAvailableContactIds);
+	if (count($nonAvailableContactIds)) {
+		$contact_params['id'] = ['NOT IN' => $nonAvailableContactIds];
+	}
 
 	// check whether we need to search for activities if so fill the activity params
 	$activity_params = array();
