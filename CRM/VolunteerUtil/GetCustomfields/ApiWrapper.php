@@ -20,10 +20,12 @@ class CRM_VolunteerUtil_GetCustomfields_ApiWrapper implements API_Wrapper {
 		$optionListIDs[] = $optionGroupId['result'];
 		$customField = array(
 			'name' => $activityTypeIdField['values']['name'],
+			'column_name' => $activityTypeIdField['values']['name'],
 			'html_type' => $activityTypeIdField['values']['html']['type'],
 			'label' => $activityTypeIdField['values']['title'],
 			'id' => $activityTypeIdField['values']['name'],
 			'option_group_id' => $optionGroupId,
+			'weight' => -999
 		);
 		$customFields[] = $customField;
 		$activityStatusIdField = civicrm_api3('Activity', 'getfield', array('name' => 'status_id', 'action' => 'get'));
@@ -31,10 +33,12 @@ class CRM_VolunteerUtil_GetCustomfields_ApiWrapper implements API_Wrapper {
 		$optionListIDs[] = $optionGroupId['result'];
 		$customField = array(
 			'name' => $activityStatusIdField['values']['name'],
+			'column_name' => $activityStatusIdField['values']['name'],
 			'html_type' => $activityStatusIdField['values']['html']['type'],
 			'label' => $activityStatusIdField['values']['title'],
 			'id' => $activityStatusIdField['values']['name'],
 			'option_group_id' => $optionGroupId,
+			'weight' => -998,
 		);
 		$customFields[] = $customField;
 
