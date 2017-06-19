@@ -22,7 +22,7 @@ class CRM_VolunteerUtil_GetCustomfields_ApiWrapper implements API_Wrapper {
 			'name' => $activityTypeIdField['values']['name'],
 			'column_name' => $activityTypeIdField['values']['name'],
 			'html_type' => $activityTypeIdField['values']['html']['type'],
-			'label' => $activityTypeIdField['values']['title'],
+			'label' => ts('Activity type'),
 			'id' => $activityTypeIdField['values']['name'],
 			'option_group_id' => $optionGroupId,
 			'weight' => -999
@@ -35,7 +35,7 @@ class CRM_VolunteerUtil_GetCustomfields_ApiWrapper implements API_Wrapper {
 			'name' => $activityStatusIdField['values']['name'],
 			'column_name' => $activityStatusIdField['values']['name'],
 			'html_type' => $activityStatusIdField['values']['html']['type'],
-			'label' => $activityStatusIdField['values']['title'],
+			'label' => ts('Activity status'),
 			'id' => $activityStatusIdField['values']['name'],
 			'option_group_id' => $optionGroupId,
 			'weight' => -998,
