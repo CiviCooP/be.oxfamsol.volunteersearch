@@ -44,8 +44,8 @@ INNER JOIN civicrm_volunteer_project ON civicrm_volunteer_project.id = civicrm_v
 INNER JOIN {$volunteerNeedCustomGroup['table_name']} ON {$volunteerNeedCustomGroup['table_name']}.{$volunteerNeedCustomField['column_name']} = civicrm_volunteer_need.id
 INNER JOIN civicrm_activity_contact ON civicrm_activity_contact.activity_id = {$volunteerNeedCustomGroup['table_name']}.entity_id
 WHERE civicrm_volunteer_need.is_active = 1 and civicrm_volunteer_project.is_active = 1
-AND civicrm_volunteer_need.start_time IS NOT NULL 
-AND 
+AND civicrm_volunteer_need.start_time IS NOT NULL
+AND
 (
 	(civicrm_volunteer_need.end_time IS NOT NULL AND
 		(
@@ -54,7 +54,7 @@ AND
 			%2 BETWEEN civicrm_volunteer_need.start_time AND civicrm_volunteer_need.end_time
 		)
 	)
-	OR 
+	OR
 	(civicrm_volunteer_need.duration IS NOT NULL AND
 		(
 			%1 BETWEEN civicrm_volunteer_need.start_time AND DATE_ADD(civicrm_volunteer_need.start_time, INTERVAL civicrm_volunteer_need.duration MINUTE)
@@ -87,6 +87,7 @@ AND
 			unset($contact_params[$field]);
 		}
 	}
+	$noContacts = false;
 	if (count($activity_params)) {
 		$activity_params['options']['limit'] = 0;
 		$activity_params['return'] = 'id';
@@ -97,17 +98,26 @@ AND
 		if (count($nonAvailableContactIds)) {
 			$notAvailableContactsSql = ' AND contact_id NOT IN ('.implode(",", $nonAvailableContactIds).')';
 		}
-		$activityContactSql = "SELECT DISTINCT contact_id FROM civicrm_activity_contact WHERE activity_id IN (".implode(",", $activityIds).") $notAvailableContactsSql";
-		$activityContacts = CRM_Core_DAO::executeQuery($activityContactSql);
-		$activityContactIds = array();
-		while ($activityContacts->fetch()) {
-			$activityContactIds[] = $activityContacts->contact_id;
+		if (count($activityIds) > 0) {
+			$activityContactSql = "SELECT DISTINCT contact_id FROM civicrm_activity_contact WHERE activity_id IN (".implode(",", $activityIds).") $notAvailableContactsSql";
+			$activityContacts = CRM_Core_DAO::executeQuery($activityContactSql);
+			$activityContactIds = array();
+			while ($activityContacts->fetch()) {
+				$activityContactIds[] = $activityContacts->contact_id;
+			}
+			$contact_params['id'] = array('IN' => $activityContactIds);
+		} else {
+			$noContacts = true;
 		}
-		$contact_params['id'] = array('IN' => $activityContactIds);
 	}
 
-	$contacts = civicrm_api3('Contact', 'get', $contact_params);
-	$contactsFound = civicrm_api3('Contact', 'getcount', $contact_params);
+	if ($noContacts) {
+		$contacts['values'] = array();
+		$contactsFound = 0;
+	} else {
+		$contacts = civicrm_api3('Contact', 'get', $contact_params);
+		$contactsFound = civicrm_api3('Contact', 'getcount', $contact_params);
+	}
 	$result = civicrm_api3_create_success($contacts['values'], "VolunteerUtil", "loadbackbone", $params);
 	$result['metadata']['total_found'] = $contactsFound;
 	return $result;
