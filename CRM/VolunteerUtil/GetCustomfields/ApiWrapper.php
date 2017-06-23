@@ -54,14 +54,17 @@ class CRM_VolunteerUtil_GetCustomfields_ApiWrapper implements API_Wrapper {
 			'options' => array('limit' => 0),
 		));
 
+		$currentWeight = -997;
 		for($i=0; $i<count($customGroupAPI['values']); $i++) {
 			for($j=0; $j < count($customGroupAPI['values'][$i]['api.customField.get']['values']); $j++) {
 				$customField = $customGroupAPI['values'][$i]['api.customField.get']['values'][$j];
+				$customField['weight'] = $currentWeight;
 				$customField['id'] = 'activity_'.$customField['id'];
 				if (isset($customField['option_group_id'])) {
 					$optionListIDs[] = $customField['option_group_id'];
 				}
 				$customFields[] = $customField;
+				$currentWeight ++;
 			}
 		}
 
@@ -77,10 +80,17 @@ class CRM_VolunteerUtil_GetCustomfields_ApiWrapper implements API_Wrapper {
 		$optionData = _volunteer_util_groupBy($optionValueAPI['values'], 'option_group_id');
 		foreach($customFields as &$field) {
 			$optionGroupId = CRM_Utils_Array::value('option_group_id', $field);
-			if ($optionGroupId) {
-				$field['options'] = array_merge(array(array('value' => '', 'label' => 'select')), $optionData[$optionGroupId]);
-				// Boolean fields don't use option groups, so we supply one
+			if ($optionGroupId && $field['html_type'] != 'Multi-Select') {
+				$field['options'] = array_merge([
+					[
+						'value' => '',
+						'label' => 'select'
+					]
+				], $optionData[$optionGroupId]);
+			} elseif ($optionGroupId && $field['html_type'] == 'Multi-Select') {
+				$field['options'] = $optionData[$optionGroupId];
 			} elseif ($field['data_type'] === 'Boolean' && $field['html_type'] === 'Radio') {
+				// Boolean fields don't use option groups, so we supply one
 				$field['options'] = array(
 					array (
 						'is_active' => 1,

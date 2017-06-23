@@ -74,41 +74,91 @@ AND
 	}
 
 	// check whether we need to search for activities if so fill the activity params
-	$activity_params = array();
+	$activityWhere = 'civicrm_activity.is_deleted = 0 AND civicrm_activity.is_current_revision = 1';
+	$activityParamNum = 1;
+	$activityParams = array();
+	$activityJoins = array();
+	$activityCustomFieldValues = array();
+	$activityCustomFieldIds = array();
 	foreach($contact_params as $field => $value) {
-		if (stripos($field, 'custom_activity_') === 0) {
-			$activity_params['custom_'.substr($field, 16)] = $value;
-			unset($contact_params[$field]);
-		} elseif ($field == 'custom_activity_type_id') {
-			$activity_params['activity_type_id'] = $value;
+		if ($field == 'custom_activity_type_id') {
+			$activityWhere .= ' AND civicrm_activity.activity_type_id = %'.$activityParamNum;
+			$activityParams[$activityParamNum] = array($value, 'Integer');
+			$activityParamNum ++;
 			unset($contact_params[$field]);
 		} elseif ($field == 'custom_status_id') {
-			$activity_params['status_id'] = $value;
+			$activityWhere .= ' AND civicrm_activity.status_id = %'.$activityParamNum;
+			$activityParams[$activityParamNum] = array($value, 'Integer');
+			$activityParamNum ++;
+			unset($contact_params[$field]);
+		} elseif (stripos($field, 'custom_activity_') === 0) {
+			$activityCustomFieldIds[] = substr($field, 16);
+			$activityCustomFieldValues[substr($field, 16)] = $value;
 			unset($contact_params[$field]);
 		}
 	}
-	$noContacts = false;
-	if (count($activity_params)) {
-		$activity_params['options']['limit'] = 0;
-		$activity_params['return'] = 'id';
-		$activity_params['sequential'] = 0;
-		$activities = civicrm_api3('Activity', 'get', $activity_params);
-		$activityIds = array_keys($activities['values']);
-		$notAvailableContacts = '';
-		if (count($nonAvailableContactIds)) {
-			$notAvailableContactsSql = ' AND contact_id NOT IN ('.implode(",", $nonAvailableContactIds).')';
-		}
-		if (count($activityIds) > 0) {
-			$activityContactSql = "SELECT DISTINCT contact_id FROM civicrm_activity_contact WHERE activity_id IN (".implode(",", $activityIds).") $notAvailableContactsSql";
-			$activityContacts = CRM_Core_DAO::executeQuery($activityContactSql);
-			$activityContactIds = array();
-			while ($activityContacts->fetch()) {
-				$activityContactIds[] = $activityContacts->contact_id;
+	if (count($activityCustomFieldIds)) {
+		$activityCustomFields = civicrm_api3('CustomField', 'get', [
+			'id' => ['IN' => $activityCustomFieldIds],
+			'options' => ['limit' => 0],
+			'sequential' => 1,
+			'api.CustomGroup.getvalue' => ['return' => "table_name"],
+		]);
+		for ($i = 0; $i < count($activityCustomFields['values']); $i++) {
+			$customFieldId = $activityCustomFields['values'][$i]['id'];
+			$tableName = $activityCustomFields['values'][$i]['api.CustomGroup.getvalue'];
+			$columnName = $activityCustomFields['values'][$i]['column_name'];
+			$activityJoins[$tableName] = 'INNER JOIN `' . $tableName . '` ON `' . $tableName . '`.`entity_id` = `civicrm_activity`.`id`';
+			switch ($activityCustomFields['values'][$i]['html_type']) {
+				case 'Multi-Select':
+					$values = $activityCustomFieldValues[$customFieldId];
+					if (!is_array($values) && strlen($values)) {
+						$values = [$values];
+					}
+					elseif (!is_array($values)) {
+						$values = [];
+					} else {
+						$values = $activityCustomFieldValues[$customFieldId]['IN'];
+					}
+					foreach ($values as $value) {
+						$activityWhere .= ' AND `' . $tableName . '`.`' . $columnName . '` LIKE %' . $activityParamNum;
+						$activityParams[$activityParamNum] = [
+							'%' . CRM_Core_DAO::VALUE_SEPARATOR . $value . CRM_Core_DAO::VALUE_SEPARATOR . '%',
+							'String'
+						];
+						$activityParamNum++;
+					}
+					break;
+				default:
+					$activityWhere .= ' AND `' . $tableName . '`.`' . $columnName . '` = %' . $activityParamNum;
+					$activityParams[$activityParamNum] = [
+						$activityCustomFieldValues[$customFieldId],
+						$activityCustomFields['values'][$i]['data_type']
+					];
+					$activityParamNum++;
 			}
-			$contact_params['id'] = array('IN' => $activityContactIds);
-		} else {
-			$noContacts = true;
 		}
+	}
+	$noContacts = FALSE;
+	if (count($activityParams)) {
+		if (count($nonAvailableContactIds)) {
+			$activityWhere .= " AND civicrm_activity_contact.contact_id NOT IN(".implode(",", $nonAvailableContactIds).")";
+		}
+		$activityJoin = implode(" ", $activityJoins);
+		$activitySql = "
+			SELECT DISTINCT civicrm_activity_contact.contact_id as contact_id 
+			FROM civicrm_activity_contact 
+			INNER JOIN civicrm_activity ON civicrm_activity.id = civicrm_activity_contact.activity_id
+			$activityJoin
+			WHERE $activityWhere
+			";
+		$activityContacts = CRM_Core_DAO::executeQuery($activitySql, $activityParams);
+		$noContacts = true;
+		while ($activityContacts->fetch()) {
+			$activityContactIds[] = $activityContacts->contact_id;
+			$noContacts = false;
+		}
+		$contact_params['id'] = array('IN' => $activityContactIds);
 	}
 
 	if ($noContacts) {
