@@ -9,7 +9,7 @@ class CRM_VolunteerUtil_GetCustomfields_ApiWrapper implements API_Wrapper {
 	public function toApiOutput($apiRequest, $results) {
 		// Get custom fields of activities and the status and activity type field.
 
-		$allowedCustomFieldTypes = array('AdvMulti-Select', 'Autocomplete-Select',
+		$allowedCustomFieldTypes = array('Autocomplete-Select',
 			'CheckBox', 'Multi-Select', 'Radio', 'Select', 'Text');
 
 		$optionListIDs = array();
